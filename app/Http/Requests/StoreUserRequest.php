@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -78,8 +79,7 @@ class StoreUserRequest extends FormRequest
 
         // Upload and get path of the profile picture
         if ($this->hasFile('photo')) {
-            $fileName = Str::uuid() . '.' . $this->file('photo')->getClientOriginalExtension();
-            $validated['photo'] = $this->file('photo')->storeAs('photos', $fileName, 'public');
+            $validated['photo'] = app(UserService::class)->upload($this->file('photo'));
         }
 
         return [

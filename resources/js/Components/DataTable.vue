@@ -120,7 +120,7 @@ const table = useVueTable({
             <Button
                 variant="outline"
                 size="sm"
-                :disabled="!table.getCanPreviousPage()"
+                :disabled="!props?.data?.prev_page_url"
                 @click="table.previousPage()"
             >
                 <Link :href="props?.data?.prev_page_url">
@@ -130,7 +130,7 @@ const table = useVueTable({
             <Button
                 variant="outline"
                 size="sm"
-                :disabled="!table.getCanNextPage()"
+                :disabled="!props?.data?.next_page_url"
                 @click="table.nextPage()"
             >
                 <Link :href="props?.data?.next_page_url">

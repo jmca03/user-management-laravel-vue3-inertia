@@ -2,7 +2,12 @@
 
 namespace App\Providers;
 
+use App\Events\UserSaved;
 use App\Http\Controllers\UserController;
+use App\Interfaces\UserServiceInterface;
+use App\Listeners\SaveUserBackgroundInformation;
+use App\Services\UserService;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -14,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        app()->bind(UserServiceInterface::class, UserService::class);
     }
 
     /**
@@ -37,5 +42,11 @@ class AppServiceProvider extends ServiceProvider
             });
 
         });
+
+        // Register Events
+        Event::listen(
+            UserSaved::class,
+            SaveUserBackgroundInformation::class
+        );
     }
 }

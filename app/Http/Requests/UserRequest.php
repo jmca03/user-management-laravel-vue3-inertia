@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Services\UserService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserRequest extends FormRequest
 {
@@ -11,7 +14,7 @@ class UserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -21,8 +24,37 @@ class UserRequest extends FormRequest
      */
     public function rules(): array
     {
+        return app(UserService::class)->rules($this->route('user'));
+    }
+
+    /**
+     * @override validated
+     *
+     * @param $key
+     * @param $default
+     *
+     * @return array
+     */
+    public function validated($key = null, $default = null): array
+    {
+        $validated = parent::validated();
+
+        if (!$validated['password']) {
+            unset($validated['password']);
+        }
+
+        if (isset($validated['password'])) {
+            $validated['password'] = app(UserService::class)->hash($validated['password']);
+        }
+
+        // Upload and get path of the profile picture
+        if ($this->hasFile('photo')) {
+            $fileName = Str::uuid() . '.' . $this->file('photo')->getClientOriginalExtension();
+            $validated['photo'] = $this->file('photo')->storeAs('photos', $fileName, 'public');
+        }
+
         return [
-            //
+            ...$validated
         ];
     }
 }

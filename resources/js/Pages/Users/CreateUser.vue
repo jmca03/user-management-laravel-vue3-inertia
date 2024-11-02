@@ -50,7 +50,6 @@ const formEditable = ref(true)
 const handleFileUpload = (e) => {
 
     profilePicture.value = URL.createObjectURL(e.target.files[0])
-
     form.photo = e.target.files[0];
 }
 

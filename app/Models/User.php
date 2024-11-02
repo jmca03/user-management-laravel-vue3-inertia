@@ -3,8 +3,12 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserPrefix;
+use App\Events\UserSaved;
+use App\Services\UserService;
 use App\Traits\AddRowNumber;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -33,8 +37,15 @@ class User extends Authenticatable
         'email_verified_at',
     ];
 
+    public static function booted()
+    {
+        static::saved(function (User $user) {
+            event(new UserSaved($user));
+        });
+    }
+
     protected $appends = [
-        'fullname', 'middleinitial', 'avatar'
+        'fullname', 'middleinitial', 'avatar', 'gender'
     ];
 
     /**
@@ -56,7 +67,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            //            'password' => 'hashed',
         ];
     }
 
@@ -71,7 +82,7 @@ class User extends Authenticatable
         $middleName = $this->attributes['middlename'];
         $lastName = $this->attributes['lastname'];
 
-        $middleInitial = $this->getInitials($middleName);
+        $middleInitial = app(UserService::class)->getInitials($middleName);
 
         if ($middleName) {
             return "{$firstName} {$middleInitial} {$lastName}";
@@ -100,29 +111,21 @@ class User extends Authenticatable
     {
         $middleName = $this->attributes['middlename'];
 
-        return $this->getInitials($middleName);
+        return app(UserService::class)->getInitials($middleName);
     }
 
-
     /**
-     * Get initials
+     * Get gender
      *
-     * @param string $value
-     *
-     * @return string
+     * @return string|null
      */
-    private function getInitials(?string $value): string
+    public function getGenderAttribute(): ?string
     {
-        if (!$value) return '';
-        $parts = explode(' ', $value);
+        return UserPrefix::gender($this->attributes['prefixname']);
+    }
 
-        $initials = '';
-        foreach ($parts as $part) {
-            if (!empty($part)) {
-                $initials .= strtoupper($part[0]) . '.'; // Get the first letter and convert to uppercase
-            }
-        }
-
-        return $initials;
+    public function details(): HasMany
+    {
+        return $this->hasMany(Detail::class);
     }
 }

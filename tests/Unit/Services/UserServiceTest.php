@@ -5,16 +5,20 @@ namespace Tests\Unit\Services;
 use App\Http\Controllers\UserController;
 use App\Http\Requests\UploadProfilePictureRequest;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class UserServiceTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * @test
      * @return void
@@ -22,16 +26,13 @@ class UserServiceTest extends TestCase
     public function it_can_return_a_paginated_list_of_users()
     {
         // Arrangements
-        $user = User::factory()->create();
+        User::factory(5)->create();
 
         // Actions
-        $response = $this->actingAs($user)->get(route('users.index'));
+        $response = app(UserService::class)->list(request());
 
         // Assertions
-        $response->assertInertia(fn(AssertableInertia $page) => $page
-            ->component('Users/Users')
-            ->has('users')
-        );
+        $this->assertInstanceOf(LengthAwarePaginator::class, $response);
     }
 
     /**
@@ -42,29 +43,21 @@ class UserServiceTest extends TestCase
     {
         // Arrangements
         $user = User::factory()->create();
-
-        $email = fake()->unique()->safeEmail();
-        $username = fake()->unique()->userName();
-        $password = fake()->password(8);
+        $file = (UploadedFile::fake()->image('profile.jpg', 500, 500)->size(512))->store('public');
 
         // Actions
-        $response = $this->actingAs($user)->post(route('users.store'), [
-            ...User::factory()->make([
-                'email' => $email,
-                'username' => $username,
-            ])->toArray(),
-            'password' => $password,
-            'password_confirmation' => $password,
-            'photo' => UploadedFile::fake()->image('profile.jpg', 500, 500)->size(512),
+        $response = app(UserService::class)->store([
+            ...User::factory()->make()->toArray(),
+            'password' => bcrypt('password'),
+            'photo' => $file
         ]);
 
         // Assertions
         $this->assertDatabaseHas('users', [
-            'email' => $email,
-            'username' => $username
+            'id' => $response->id,
         ]);
 
-        $response->assertRedirect(route('users.index'));
+        $this->assertInstanceOf(User::class, $response);
     }
 
     /**
@@ -73,20 +66,15 @@ class UserServiceTest extends TestCase
      */
     public function it_can_find_and_return_an_existing_user()
     {
+
         // Arrangements
         $user = User::factory()->create();
 
         // Actions
-        $response = $this->actingAs($user)->get(route('users.show', [
-            'user' => $user->id,
-        ]));
+        $response = app(UserService::class)->find($user->id);
 
         // Assertions
-        $response->assertInertia(fn(AssertableInertia $page) => $page
-            ->component('Users/ViewUser')
-            ->has('user')
-            ->has('userPrefixes')
-        );
+        $this->assertInstanceOf(User::class, $response);
     }
 
     /**
@@ -98,27 +86,17 @@ class UserServiceTest extends TestCase
         // Arrangements
         $user = User::factory()->create();
 
-        $email = fake()->unique()->safeEmail();
-        $username = fake()->unique()->userName();
-        $password = fake()->password(8);
+        $file = (UploadedFile::fake()->image('profile.jpg', 500, 500)->size(512))->store('public');
 
         // Actions
-        $response = $this->actingAs($user)->post(route('users.update', [
-            'user' => $user->id,
-        ]), [
-            ...User::factory()->make([
-                'email' => $email,
-                'username' => $username,
-            ])->toArray(),
-            'password' => $password,
-            'password_confirmation' => $password,
-            'photo' => UploadedFile::fake()->image('profile.jpg', 500, 500)->size(512),
+        $response = app(UserService::class)->update($user->id, [
+            ...User::factory()->make()->toArray(),
+            'password' => bcrypt('password'),
+            'photo' => $file
         ]);
 
         // Assertions
-        $response->assertRedirect(route('users.edit', [
-            'user' => $user->id,
-        ]));
+        $this->assertInstanceOf(User::class, $response);
     }
 
     /**
@@ -131,12 +109,13 @@ class UserServiceTest extends TestCase
         $user = User::factory()->create();
 
         // Actions
-        $response = $this->actingAs($user)->delete(route('users.destroy', [
-            'user' => (User::factory()->create())->id,
-        ]));
+        app(UserService::class)->destroy($user->id);
+
 
         // Assertions
-        $response->assertRedirect(route('users.index'));
+        $this->assertSoftDeleted('users', [
+            'id' => $user->id
+        ]);
     }
 
     /**
@@ -146,16 +125,13 @@ class UserServiceTest extends TestCase
     public function it_can_return_a_paginated_list_of_trashed_users()
     {
         // Arrangements
-        $user = User::factory()->create();
+        User::factory(5)->deleted()->create();
 
         // Actions
-        $response = $this->actingAs($user)->get(route('users.trashed'));
+        $response = app(UserService::class)->listTrashed(request());
 
         // Assertions
-        $response->assertInertia(fn(AssertableInertia $page) => $page
-            ->component('Users/TrashedUsers')
-            ->has('users')
-        );
+        $this->assertInstanceOf(LengthAwarePaginator::class, $response);
     }
 
     /**
@@ -165,16 +141,16 @@ class UserServiceTest extends TestCase
     public function it_can_restore_a_soft_deleted_user()
     {
         // Arrangements
-        $user = User::factory()->create();
-        $deletedUser = User::factory()->deleted()->create();
+        $user = User::factory()->deleted()->create();
 
         // Actions
-        $response = $this->actingAs($user)->patch(route('users.restore', [
-            'user' => $deletedUser->id,
-        ]));
+        app(UserService::class)->restore($user->id);
+
 
         // Assertions
-        $response->assertRedirect(route('users.index'));
+        $this->assertNotSoftDeleted('users', [
+            'id' => $user->id
+        ]);
     }
 
     /**
@@ -184,37 +160,50 @@ class UserServiceTest extends TestCase
     public function it_can_permanently_delete_a_soft_deleted_user()
     {
         // Arrangements
-        $user = User::factory()->create();
-        $deletedUser = User::factory()->deleted()->create();
+        $user = User::factory()->deleted()->create();
 
         // Actions
-        $response = $this->actingAs($user)->delete(route('users.delete', [
-            'user' => $deletedUser->id,
-        ]));
+        app(UserService::class)->delete($user->id);
+
 
         // Assertions
-        $response->assertRedirect(route('users.index'));
+        $this->assertDatabaseMissing('users', [
+            'id' => $user->id
+        ]);
     }
 
     /**
      * @test
      * @return void
      */
-    public function it_can_upload_photo()
+    public function it_can_upload_photo                             ()
     {
         // Arrangements
-        $user = User::factory()->create();
+        $file = UploadedFile::fake()->image('profile.jpg', 500, 500)->size(512);
 
         // Actions
-        $response = $this->actingAs($user)->post(route('users.upload', [
-            'user' => $user->id,
-        ]), [
-            'photo' => UploadedFile::fake()->image('profile.jpg', 500, 500)->size(512),
-        ]);
+        $file = app(UserService::class)->upload($file);
+
 
         // Assertions
-        $response->assertRedirect(route('users.edit', [
-            'user' => $user->id
-        ]));
+        $this->assertIsString($file);
+        Storage::disk('public')->assertExists($file);
+    }
+
+    /**
+     * @test
+     * @return void
+     */
+    public function it_can_get_initials                             ()
+    {
+        // Arrangements
+        $value = 'Lorem Ipsum Dolor Sit Amet';
+
+        // Actions
+        $response = app(UserService::class)->getInitials($value);
+
+
+        // Assertions
+        $this->assertEquals('L. I. D. S. A.', $response);
     }
 }

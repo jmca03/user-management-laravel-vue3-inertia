@@ -36,7 +36,6 @@ Route::middleware('auth')->group(function () {
         'controller' => UserController::class,
     ], function () {
         Route::post('/{user}/update', 'update')->name('users.update');
-        Route::post('/{user}/upload', 'upload')->name('users.upload');
     });
 
    Route::resource('users', UserController::class)->except('update');

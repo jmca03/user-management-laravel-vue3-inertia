@@ -6,7 +6,10 @@ use App\Enums\UserPrefix;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Requests\UploadProfilePictureRequest;
+use App\Http\Requests\UserRequest;
+use App\Interfaces\UserServiceInterface;
 use App\Models\User;
+use App\Services\UserService;
 use App\Traits\Pagination;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
@@ -18,17 +21,23 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class UserController extends Controller
 {
-    use Pagination;
+    /**
+     * Create an instance of the controller class.
+     *
+     * @param \App\Interfaces\UserServiceInterface $userService
+     */
+    public function __construct(protected UserServiceInterface $userService)
+    {
+
+    }
 
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request): Response
     {
-        $model = User::query()->rowNumber();
-
         return Inertia::render('Users/Users', [
-            'users'        => $this->paginate($model, $request),
+            'users'        => $this->userService->list($request),
             'alertMessage' => session('alertMessage')
         ]);
     }
@@ -39,21 +48,16 @@ class UserController extends Controller
     public function create()
     {
         return Inertia::render('Users/CreateUser', [
-            'userPrefixes' => array_map(function ($prefix) {
-                return [
-                    'label' => $prefix,
-                    'value' => $prefix,
-                ];
-            }, array_column(UserPrefix::cases(), 'value'))
+            'userPrefixes' => $this->userService->userPrefixes(),
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreUserRequest $request)
+    public function store(UserRequest $request)
     {
-        User::create($request->validated());
+        $user = $this->userService->store($request->validated());
 
         return redirect()->route('users.index')->with('alertMessage', 'User has been created.');
     }
@@ -63,16 +67,9 @@ class UserController extends Controller
      */
     public function show(string $id)
     {
-        $user = User::query()->findOrFail($id);
-
         return Inertia::render('Users/ViewUser', [
-            'user'         => $user,
-            'userPrefixes' => array_map(function ($prefix) {
-                return [
-                    'label' => $prefix,
-                    'value' => $prefix,
-                ];
-            }, array_column(UserPrefix::cases(), 'value'))
+            'user'         => $this->userService->find($id),
+            'userPrefixes' => $this->userService->userPrefixes(),
         ]);
     }
 
@@ -81,16 +78,9 @@ class UserController extends Controller
      */
     public function edit(string $id)
     {
-        $user = User::query()->findOrFail($id);
-
         return Inertia::render('Users/EditUser', [
-            'user'         => $user,
-            'userPrefixes' => array_map(function ($prefix) {
-                return [
-                    'label' => $prefix,
-                    'value' => $prefix,
-                ];
-            }, array_column(UserPrefix::cases(), 'value'))
+            'user'         => $this->userService->find($id),
+            'userPrefixes' => $this->userService->userPrefixes(),
         ]);
     }
 
@@ -102,11 +92,9 @@ class UserController extends Controller
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(UpdateUserRequest $request, string $id): RedirectResponse
+    public function update(UserRequest $request, string $id): RedirectResponse
     {
-        $user = User::query()->findOrFail($id);
-        $user->update($request->validated());
-
+        $user = $this->userService->update($id, $request->validated());
         return redirect()->route('users.edit', ['user' => $id]);
     }
 
@@ -115,12 +103,7 @@ class UserController extends Controller
      */
     public function destroy(string $id)
     {
-        if ((int) $id === auth()->id()) {
-            throw new BadRequestException('You cannot delete yourself.');
-        }
-
-        $model = User::destroy($id);
-
+        $this->userService->destroy($id);
         return redirect()->route('users.index')->with('alertMessage', 'User has been deleted.');
     }
 
@@ -133,10 +116,8 @@ class UserController extends Controller
      */
     public function trashed(Request $request): Response
     {
-        $model = User::onlyTrashed()->rowNumber();
-
         return Inertia::render('Users/TrashedUsers', [
-            'users'        => $this->paginate($model, $request),
+            'users'        => $this->userService->listTrashed($request),
             'alertMessage' => session('alertMessage')
         ]);
     }
@@ -150,9 +131,7 @@ class UserController extends Controller
      */
     public function restore(string $id): RedirectResponse
     {
-        $model = User::withTrashed()->findOrFail($id);
-        $model->restore();
-
+        $this->userService->restore($id);
         return redirect()->route('users.index')->with('alertMessage', 'User has been restored.');
     }
 
@@ -165,26 +144,7 @@ class UserController extends Controller
      */
     public function delete(string $id): RedirectResponse
     {
-        $model = User::withTrashed()->findOrFail($id);
-        $model->forceDelete();
-
+        $this->userService->delete($id);
         return redirect()->route('users.index')->with('alertMessage', 'User has been permanently deleted.');
-    }
-
-    /**
-     * Upload a profile picture?
-     *
-     * @param \App\Http\Requests\UploadProfilePictureRequest $request
-     * @param string                                         $id
-     *
-     * @return RedirectResponse
-     */
-    public function upload(UploadProfilePictureRequest $request, string $id): RedirectResponse
-    {
-        $user = User::query()->findOrFail($id);
-
-        $user->update($request->validated());
-
-        return redirect()->route('users.edit', ['user' => $user]);
     }
 }

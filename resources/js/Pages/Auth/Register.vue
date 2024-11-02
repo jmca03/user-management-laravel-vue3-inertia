@@ -20,6 +20,8 @@ import {Input} from "@/Components/ui/input/index.js";
 import {Alert, AlertTitle} from "@/Components/ui/alert/index.js";
 import {ref} from "vue";
 import UserForm from "@/Pages/Users/UserForm.vue";
+import {toast} from "vue3-toastify";
+import 'vue3-toastify/dist/index.css';
 
 const props = defineProps({
                               userPrefixes: {
@@ -45,13 +47,16 @@ const profilePicture = ref(null);
 const formEditable = ref(true)
 
 const handleFileUpload = (e) => {
-    console.log(e.target.files[0]);
+    profilePicture.value = URL.createObjectURL(e.target.files[0])
     form.photo = e.target.files[0];
 }
 
 const submit = () => {
 
     form.post(route('register'), {
+        onSuccess: () => {
+            toast.success('User successfully created');
+        },
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };

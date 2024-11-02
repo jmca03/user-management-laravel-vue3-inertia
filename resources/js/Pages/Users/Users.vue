@@ -2,7 +2,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import {Head, usePage} from '@inertiajs/vue3';
 import DataTable from "@/Components/DataTable.vue";
-import {h, toRaw} from "vue";
 import UserColumns from "@/Pages/Users/user-columns.js";
 import {Button} from '@/Components/ui/button/index.js'
 import {Link} from '@inertiajs/vue3'

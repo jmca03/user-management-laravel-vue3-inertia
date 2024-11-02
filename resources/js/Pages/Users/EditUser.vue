@@ -88,11 +88,12 @@ const handleSubmit = () => {
                 <UserForm :user-prefixes="userPrefixes" :form="form" :editable="formEditable" :profile-picture="profilePicture" :handle-file-upload="handleFileUpload" />
 
                 <div class="mt-3 flex justify-end">
-                    <Button @click="" class="me-2" variant="outline">
-                        <Link :href="route('users.index')">
+                    <Link :href="route('users.index')">
+                        <Button class="me-2" variant="outline">
                             Cancel
-                        </Link>
-                    </Button>
+                        </Button>
+                    </Link>
+
                     <Button type="submit">Submit</Button>
                 </div>
             </form>
