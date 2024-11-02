@@ -45,6 +45,13 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Users
                                 </NavLink>
+
+                                <NavLink
+                                    :href="route('users.trashed')"
+                                    :active="route().current('users.trashed')"
+                                >
+                                    Users (Deleted)
+                                </NavLink>
                             </div>
                         </div>
 

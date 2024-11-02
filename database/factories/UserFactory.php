@@ -48,4 +48,18 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Indicate that the model's is soft deleted
+     *
+     * @return \Database\Factories\UserFactory
+     */
+    public function deleted(): UserFactory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'deleted_at' => now(), // Set the deleted_at timestamp to the current time
+            ];
+        });
+    }
 }

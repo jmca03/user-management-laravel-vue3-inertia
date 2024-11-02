@@ -25,12 +25,18 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+
+
 Route::middleware('auth')->group(function () {
+
+    Route::softDeletes('users', 'UserController');
+
     Route::group([
         'prefix' => 'users',
         'controller' => UserController::class,
     ], function () {
-        Route::post('/update/{user}', 'update')->name('users.update');
+        Route::post('/{user}/update', 'update')->name('users.update');
+        Route::post('/{user}/upload', 'upload')->name('users.upload');
     });
 
    Route::resource('users', UserController::class)->except('update');

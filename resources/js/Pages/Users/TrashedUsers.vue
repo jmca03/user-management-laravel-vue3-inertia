@@ -6,6 +6,7 @@ import {h, toRaw} from "vue";
 import UserColumns from "@/Pages/Users/user-columns.js";
 import {Button} from '@/Components/ui/button/index.js'
 import {Link} from '@inertiajs/vue3'
+import TrashedUserColumns from "@/Pages/Users/trashed-user-columns.js";
 
 const props = defineProps({
                               users       : {
@@ -28,7 +29,7 @@ const props = defineProps({
             <h2
                 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200"
             >
-                Users
+                Users (Deleted)
             </h2>
         </template>
 
@@ -38,14 +39,7 @@ const props = defineProps({
                     class="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800"
                 >
                     <div class="p-6 text-gray-900 dark:text-gray-100">
-                        <div class="flex justify-end mb-4">
-                            <Button>
-                                <Link :href="route('users.create')">
-                                    Create
-                                </Link>
-                            </Button>
-                        </div>
-                        <DataTable :columns="UserColumns" :data="users"/>
+                        <DataTable :columns="TrashedUserColumns" :data="users"/>
                     </div>
                 </div>
             </div>
